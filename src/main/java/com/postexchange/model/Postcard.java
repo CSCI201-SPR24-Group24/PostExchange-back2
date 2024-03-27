@@ -9,7 +9,7 @@ package com.postexchange.model;
  *
  * @author jianqing
  */
-public class Postcard
-{
-    
+public class Postcard {
+
+
 }
