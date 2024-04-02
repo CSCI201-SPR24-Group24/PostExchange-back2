@@ -1,6 +1,6 @@
 package com.postexchange.model;
 
-<<<<<<< HEAD
+
 public class Postcard {
     private int postcardID;
     private String timeSent;
@@ -80,13 +80,4 @@ public class Postcard {
     public void setPostcardMessage(String postcardMessage) {
         this.postcardMessage = postcardMessage;
     }
-=======
-/**
- *
- * @author jianqing
- */
-public class Postcard {
-
-
->>>>>>> main
 }
