@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+Author: jianqing
+Date: Apr 6, 2024
+Description: This document is created for
+-->
+<html>
+    <head>
+        <title>login</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        user login
+        <form action="doLogin" method="POST">
+            <input type="email" name="email" placeholder="email">
+            <input type="password" name="password" placeholder="password">
+            <button type="submit">login!</button>
+        </form>
+
+        <script>
+            
+            //Code to test the login endpoint
+            
+            document.addEventListener('DOMContentLoaded', function () {
+                var form = document.querySelector('form');
+
+                form.onsubmit = function (event) {
+                    // Prevent the default form submission
+                    event.preventDefault();
+
+                    // Create an instance of XMLHttpRequest
+                    var xhr = new XMLHttpRequest();
+
+                    // Prepare form data
+                    var formData = new FormData(form);
+
+                    // Convert FormData to a query string
+                    var queryString = new URLSearchParams(formData).toString();
+
+                    // Specify the request type, URL, and set it to asynchronous
+                    xhr.open('POST', form.getAttribute('action'), true);
+                    // Set the content type header for sending form data as URL-encoded
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+                    // Define what happens on successful data submission
+                    xhr.onload = function () {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            // Parse JSON response and log it to the console
+                            console.log(JSON.parse(xhr.responseText));
+                        } else {
+                            // Log errors to the console if the request was not successful
+                            console.error('The request failed!');
+                            console.log(xhr.responseText);
+                        }
+                    };
+
+                    // Define what happens in case of an error
+                    xhr.onerror = function () {
+                        console.error('There was an error with the request.');
+                    };
+
+                    // Send the request with the form data
+                    xhr.send(queryString);
+                };
+            });
+
+        </script>
+    </body>
+</html>
