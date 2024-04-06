@@ -1,5 +1,6 @@
 #Make sure not to commit binary file and secret files!
-/target/*
+/target/
+>>>>>>> 5d379dbe5af2a674ed311dd65fd7a7c9a15f3ded
 # Some extra IDE stuff
 .idea
 .vscode
