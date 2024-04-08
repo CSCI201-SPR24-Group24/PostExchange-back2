@@ -10,10 +10,8 @@ public class Postcard {
     private String postcardImage;
     private String postcardMessage;
 
-    // Constructors
-    public Postcard() {
-    }
-
+    public Postcard(){}
+    
     public Postcard(int postcardID, String timeSent, String timeReceived, int userIDSent, int userIDReceived, String postcardImage, String postcardMessage) {
         this.postcardID = postcardID;
         this.timeSent = timeSent;
