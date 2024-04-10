@@ -46,6 +46,21 @@ public class SQLAccessor implements AutoCloseable
         return null;
     }
 
+    public int getNumberofUsers() throws SQLException
+    {
+        Statement s = dbConn.createStatement();
+        ResultSet rs = s.executeQuery("SELECT COUNT(*) FROM users");
+        int count = 0;
+
+        if(rs.next()){
+            count = rs.getInt(1);
+        }
+
+        return count;
+    }
+
+  
+
     public User getUserByUsernamePassword(String username, String password) throws SQLException
     {
         PreparedStatement ps = dbConn.prepareStatement("SELECT * FROM users WHERE email=? AND password=?");
@@ -107,7 +122,9 @@ public class SQLAccessor implements AutoCloseable
         //try-with-resources
         try(SQLAccessor sql = getDefaultInstance())
         {
-            System.out.println(sql.getUserByUsernamePassword("hayubdhbs@gmail.com", "hahshsh"));
+            System.out.println(sql.getUserByUsernamePassword("johndoe@example.com", "482c811da5d5b4bc6d497ffa98491e38"));
+            System.out.println(sql.getPostcardById(1));
+            System.out.println(sql.getNumberofUsers());
             System.out.println("Yay!");
         } catch (SQLException | ClassNotFoundException ex)
         {

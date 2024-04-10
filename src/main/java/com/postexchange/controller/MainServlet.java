@@ -27,7 +27,7 @@ import static com.postexchange.model.ResponseHelper.*;
  */
 @WebServlet(name = "MainServlet", urlPatterns =
 {
-    "/getPostcard", "/doLogin"
+    "/getPostcard", "/doLogin" , "/getHomepageData"
 }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet
 {
@@ -54,6 +54,10 @@ public class MainServlet extends HttpServlet
             case "/getUser":
                 System.out.println("Get user!");
                 break;
+            case "/getHomepageData":
+                processGetHomepageDataGET(request, response);
+                break;
+
             //Handle other endpoints...
             default:
                 writeResponse("Wrong method! You should try POST method instead for this endpoint.", "SYSERR", 405, response);
@@ -140,6 +144,30 @@ public class MainServlet extends HttpServlet
         {
             writeError(e, response);//tell the frontend we are having an error.
         }
+
+    }
+
+    protected void processGetHomepageDataGET(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException
+    {
+
+        //Return array of transaction
+
+
+        //Recently sent postcard with images
+
+        //How many users registered
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance())
+        {
+            int userCount = sql.getNumberofUsers();
+            writeOK(userCount, response);
+        }catch(SQLException | ClassNotFoundException e){
+            writeError(e, response);
+        }
+
+        //how many postcards have been received
+
+        //How many members donated in last 6 months
 
     }
 
