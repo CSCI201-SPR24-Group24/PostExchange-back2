@@ -7,56 +7,69 @@ package com.postexchange.controller;
 
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.postexchange.model.Postcard;
 import com.postexchange.model.User;
 import com.postexchange.network.SQLAccessor;
-import java.io.IOException;
-import java.sql.SQLException;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.sql.SQLException;
 
 import static com.postexchange.model.ResponseHelper.*;
 
 /**
- *
  * @author jianqing
  */
 @WebServlet(name = "MainServlet", urlPatterns =
-{
-    "/getPostcard", "/doLogin" , "/getHomepageData"
-}, loadOnStartup = 1)
-public class MainServlet extends HttpServlet
-{
+
+        {
+                "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage","/getHomepageData","/getRecentActivities","/getUser"
+
+        }, loadOnStartup = 1)
+public class MainServlet extends HttpServlet {
+
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
+
     /**
      * Handles the HTTP <code>GET</code> method.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException
-    {
+            throws ServletException, IOException {
         String path = request.getServletPath();//What's the slashtag client is requesting
-        switch (path)
-        {
+        switch (path) {
             case "/getPostcard":
                 processGetPostcardGET(request, response);
                 break;
             case "/getUser":
                 System.out.println("Get user!");
                 break;
-            case "/getHomepageData":
-                processGetHomepageDataGET(request, response);
+
+            case "/getRecentPostcardsWithImage":
+                processGetRecentPostcardsWithImageGET(request, response);
                 break;
+            case "/getRecentActivities":
+                // get recent sitewise postcard transaction
+                processGetRecentActivitiesGET(request, response);
+                break;
+                case "/getHomepageData":
+                    processGetHomepageDataGET(request, response);
+                    break;
+
 
             //Handle other endpoints...
             default:
@@ -67,28 +80,30 @@ public class MainServlet extends HttpServlet
         //processRequest(request, response);
     }
 
+
     /**
      * Handles the HTTP <code>POST</code> method.
      *
-     * @param request servlet request
+     * @param request  servlet request
      * @param response servlet response
      * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
+     * @throws IOException      if an I/O error occurs
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException
-    {
+            throws ServletException, IOException {
         //Determine which endpoint the user is trying to request
         String endpoint = request.getServletPath();
 
         //Handle the endpoints
-        switch (endpoint)
-        {
+        switch (endpoint) {
             case "/doLogin":
                 processdoLoginPOST(request, response);
                 break;
-
+            case "/doRegisterUser":
+                processDoRegisterPOST(request, response);
+                break;
+                
             //Handle other endpoints...
             default:
                 writeResponse("Wrong method! You should try GET method instead for this endpoint.", "SYSERR", 405, response);
@@ -102,27 +117,163 @@ public class MainServlet extends HttpServlet
      * @return a String containing servlet description
      */
     @Override
-    public String getServletInfo()
-    {
+    public String getServletInfo() {
         return "This is the main servlet of this website.";
     }// </editor-fold>
 
     //////// *** HANDLE EACH ENDPOINTS BELOW *** ////////
+
+    protected void processGetHomepageDataGET(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        //Connect to the database
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            // Get the data from the database
+            JSONArray activities = sql.getRecentActivities(10);
+            Postcard[] postcards = sql.getRecentPostcardsWithImage(10);
+            int numMembers = sql.getNumMembers();
+            int numPostcardReceived = sql.getNumPostcardReceived();
+            int numPostcardTravelling = sql.getNumPostcardTravelling();
+            int numPostcardReceived6Months = sql.getNumPostcardReceived6Months();
+            int numDonatedLast6Months = sql.getNumDonatedLast6Months();
+
+            // Prepare the data to send back to the client
+            JSONObject data = JSONUtil.createObj();
+            data.set("activities", activities);
+            data.set("postcards", postcards);
+            data.set("numMembers", numMembers);
+            data.set("numPostcardReceived", numPostcardReceived);
+            data.set("numPostcardTravelling", numPostcardTravelling);
+            data.set("numPostcardReceived6Months", numPostcardReceived6Months);
+            data.set("numDonatedLast6Months", numDonatedLast6Months);
+            writeOK(data, response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+    }
+
+    protected void processGetRecentActivitiesGET(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String limitStr = request.getParameter("limit");
+        int limit;
+        try {
+            limit = Integer.parseInt(limitStr);
+        } catch (NumberFormatException nfe) {
+            limit = 10;
+            return;
+        }
+
+        //Connect to the database
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            JSONArray activities = sql.getRecentActivities(limit);
+            writeOK(activities, response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+    }
+
+    protected void processGetRecentPostcardsWithImageGET(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String limitStr = request.getParameter("limit");
+        int limit;
+        try {
+            limit = Integer.parseInt(limitStr);
+        } catch (NumberFormatException nfe) {
+            limit = 10;
+            return;
+        }
+
+        //Connect to the database
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            Postcard[] postcards = sql.getRecentPostcardsWithImage(limit);
+            writeOK(postcards, response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+    }
+
+    protected void processDoRegisterPOST(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        //Get creds from front end
+        final String userName = request.getParameter("userName");
+        final String email = request.getParameter("email");
+        final String password = request.getParameter("password");
+        final String firstName = request.getParameter("firstName");
+        final String lastName = request.getParameter("lastName");
+        final String country = request.getParameter("country");
+        final String userBio = request.getParameter("userBio");
+        int USERBIOMAX = 6000;
+
+        //Validation
+        if (password.length() != 32) {
+            writeInvalidParameter("Password must be MD5 hashed. Got you:) ", response);
+            return;
+        }
+
+        if (!isEmail(email)) {
+            writeInvalidParameter("The email is in invalid format.", response);
+            return;
+        }
+
+        if (userBio.length() > 6000) {
+            writeInvalidParameter("User bio should be 6000 characrers or shorter.", response);
+            return;
+        }
+
+        //Prepare obj
+        final User user = new User();
+        user.setUserName(userName);
+        user.setEmail(email);
+        user.setPassword(password);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setUserCountry(country);
+        user.setUserBio(userBio);
+
+
+        //Try to register this user to db
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            final JSONObject dataObj = JSONUtil.createObj();
+            final int id = sql.registerNewUserInDb(user);
+            dataObj.set("userId", id);
+            writeOK(dataObj, response);
+        } catch (SQLException sqle) {
+            switch (sqle.getErrorCode()) {
+                case 1062:
+                    //duplicate entry for unique index 1062
+                    writeResponse("The email is already registered", "USER_EXISTS", 401, response);
+                    break;
+                case 1406:
+                    //Length constraint violation 1406
+                    writeInvalidParameter("One of the fields is too long! Validate before submit:)", response);
+                    break;
+                default:
+                    //Other unknown error
+                    writeError(sqle, response);
+                    break;
+            }
+        } catch (Exception nx) {
+            writeError(nx, response);
+        }
+
+    }
+
+
     /**
      * Example: Handle an endpoint called GetPostcard.  <br>
      * This endpoint accepts the postcard ID as the parameter and returns the
      * postcard object.<br>
      * This endpoint does not require authentication. <br>
      *
-     * @param request The HTTPServletRequest Object directly taken from servlet
-     * parameter.
+     * @param request  The HTTPServletRequest Object directly taken from servlet
+     *                 parameter.
      * @param response The response object.
      * @throws ServletException
      * @throws IOException
      */
     protected void processGetPostcardGET(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException
-    {
+            throws ServletException, IOException {
 
         //1. Start by getting the parameter of the postcard. 
         String postcardId = request.getParameter("id");
@@ -136,12 +287,10 @@ public class MainServlet extends HttpServlet
         }
 
         //3. Database work here to retrieve postcard information
-        try (SQLAccessor sql = SQLAccessor.getDefaultInstance())
-        {
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             Postcard pc = sql.getPostcardById(Integer.parseInt(postcardId)); //Retrieve postcard from the database
             writeOK(pc, response);//Write the response to the frontend.
-        } catch (SQLException | ClassNotFoundException e)
-        {
+        } catch (SQLException | ClassNotFoundException e) {
             writeError(e, response);//tell the frontend we are having an error.
         }
 
@@ -172,8 +321,7 @@ public class MainServlet extends HttpServlet
     }
 
     protected void processdoLoginPOST(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException
-    {
+            throws ServletException, IOException {
         //Retrieve the HTTPSession and parameters.
         HttpSession session = request.getSession();
         String email = request.getParameter("email");
@@ -181,29 +329,25 @@ public class MainServlet extends HttpServlet
         final String emailPattern = "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$"; // RegEx for validating email
 
         //is password hashed?
-        if (password.length() != 32)
-        {
+        if (password.length() != 32) {
             //return to frondend error
             writeMissingParameter("The password does not appear to be MD5 hashed. Please submit MD5 hashed password", response);
             return;
         }
 
         //is email valid?
-        if (!ReUtil.isMatch(emailPattern, email))
-        {
+        if (!ReUtil.isMatch(emailPattern, email)) {
             writeMissingParameter("Missing valid email!", response);
             return;
         }
 
         //Connect to the database
-        try (SQLAccessor sql = SQLAccessor.getDefaultInstance())
-        {
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             //Try to retrieve this pair from the database
             User user = sql.getUserByUsernamePassword(email, password);
 
             //If the email/password combination does not exist.
-            if (user == null)
-            {
+            if (user == null) {
                 writeResponse("Email/password combination does not exist.", "USER_DNE", 401, response);
                 return;
             }
@@ -214,8 +358,7 @@ public class MainServlet extends HttpServlet
             //Send the data back to the client.
             writeOK(user, response);
 
-        } catch (SQLException | ClassNotFoundException sqle)
-        {
+        } catch (SQLException | ClassNotFoundException sqle) {
             //Tell the client that we have an error.
             writeError(sqle, response);
         }

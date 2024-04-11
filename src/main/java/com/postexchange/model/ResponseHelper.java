@@ -5,6 +5,7 @@
  */
 package com.postexchange.model;
 
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import java.io.IOException;
@@ -135,6 +136,40 @@ public class ResponseHelper
     {
         //logError(err);
         writeResponse(err, "SYSERR", 500, response);
+    }
+    
+    /**
+     * Indicate that the data passed in failed validation.
+     * @param message What went wrong
+     * @param response The response object to write to.
+     * @throws ServletException
+     * @throws IOException 
+     */
+    public static void writeInvalidParameter(String message, HttpServletResponse response )throws ServletException, IOException
+    {
+        writeResponse(message, "INVALID", 401, response);
+    }
+    
+    /**
+     * Indicate that the data passed in failed validation.
+     * @param message What went wrong
+     * @param response The response object to write to.
+     * @throws ServletException
+     * @throws IOException 
+     */
+    public static void writeInvalidParameter( HttpServletResponse response )throws ServletException, IOException
+    {
+        writeResponse("A parameter passed in does not satisify format requirement. Please check API docs and data passed in.", "INVALID", 401, response);
+    }
+    
+    /**
+     * Checks if a string is a valid email.
+     * @param s The string to be validated.
+     * @return <code>true</code> if the given string is a valid email. <code>false</code> otherwise.
+     */
+    public static boolean isEmail(String s)
+    {
+        return ReUtil.isMatch("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$", s);
     }
 
     /*public static void logError(Throwable dddd)
