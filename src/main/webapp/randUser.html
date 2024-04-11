@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Get Random User</title>
+</head>
+<body>
+<h2>Test Get Random User Endpoint</h2>
+<button id="getRandomUser">Get Random User</button>
+<div id="result"></div>
+<script>
+    document.getElementById('getRandomUser').addEventListener('click', function() {
+        fetch('getRandUser', {
+            method: 'GET',
+            credentials: 'include' // This is important for including session cookies in the request
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json(); // assuming the response is JSON
+            })
+            .then(data => {
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                console.error('There has been a problem with your fetch operation:', error);
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+            });
+    });
+</script>
+</body>
+</html>

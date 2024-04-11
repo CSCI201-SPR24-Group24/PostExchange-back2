@@ -22,6 +22,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import static com.postexchange.model.ResponseHelper.*;
 
@@ -31,7 +33,8 @@ import static com.postexchange.model.ResponseHelper.*;
 @WebServlet(name = "MainServlet", urlPatterns =
 
         {
-                "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage","/getHomepageData","/getRecentActivities","/getUser"
+                "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage", "/getHomepageData", "/getRecentActivities", "/getUser",
+                "/createPostcard", "/getRandUser", "/updatePostcardImage"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {
@@ -66,11 +69,15 @@ public class MainServlet extends HttpServlet {
                 // get recent sitewise postcard transaction
                 processGetRecentActivitiesGET(request, response);
                 break;
-                case "/getHomepageData":
-                    processGetHomepageDataGET(request, response);
-                    break;
-
-
+            case "/getHomepageData":
+                processGetHomepageDataGET(request, response);
+                break;
+            case "/getRandUser":
+                processGetRandomUser(request,response);
+                break;
+            case "/updatePostcardImage":
+                processGetUpdatePostcardImage(request, response);
+                break;
             //Handle other endpoints...
             default:
                 writeResponse("Wrong method! You should try POST method instead for this endpoint.", "SYSERR", 405, response);
@@ -103,7 +110,10 @@ public class MainServlet extends HttpServlet {
             case "/doRegisterUser":
                 processDoRegisterPOST(request, response);
                 break;
-                
+            case "/createPostcard":
+                processCreatePostcardPOST(request, response);
+                break;
+
             //Handle other endpoints...
             default:
                 writeResponse("Wrong method! You should try GET method instead for this endpoint.", "SYSERR", 405, response);
@@ -122,6 +132,127 @@ public class MainServlet extends HttpServlet {
     }// </editor-fold>
 
     //////// *** HANDLE EACH ENDPOINTS BELOW *** ////////
+
+    protected void processGetUpdatePostcardImage(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException
+    {
+        //Get the session
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+
+        //Check if the user is logged in
+        if (user == null) {
+            writeNotLoggedIn(response);
+            return;
+        }
+
+        //get the postcardid and image tag as parameters
+        String postcardId = request.getParameter("postcardId");
+        String imageTag = request.getParameter("imageTag");
+
+        //Check if the parameters are missing
+        if (postcardId == null || imageTag == null) {
+            writeMissingParameter(response);
+            return;
+        }
+
+        //Check if the postcardId is an integer
+        if (!NumberUtil.isInteger(postcardId)) {
+            writeInvalidParameter("Postcard ID must be an integer", response);
+            return;
+        }
+
+        //Connect to the database
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            //Update the postcard image
+            sql.updatePostcardImage(Integer.parseInt(postcardId), imageTag);
+            writeOK("OK updatePostCardImage",response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+
+
+    }
+
+
+    protected void processGetRandomUser(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException
+    {
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+        if (user == null)
+        {
+            writeResponse("You are not logged in!", "NOLOGIN", 401, response);
+        }
+
+        try(SQLAccessor sql = SQLAccessor.getDefaultInstance())
+        {
+            User randomUser = sql.getRandomUser(user);
+            writeOK(randomUser,response);
+        }
+        catch(SQLException | ClassNotFoundException e)
+        {
+            writeError(e, response);
+        }
+
+    }
+
+
+    protected void processCreatePostcardPOST(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException
+    {
+        //Get the session
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+
+        //Check if the user is logged in
+        if (user == null) {
+            writeNotLoggedIn(response);
+            return;
+        }
+
+        //Get the postcard data from the request, parameters are userFrom, userTo, imageTag
+        String userFrom = user.getUserId();
+
+        String userTo = request.getParameter("userTo");
+        String imageTag = request.getParameter("imageTag");
+
+        //Check if the parameters are missing
+        if (userTo == null) {
+            writeMissingParameter(response);
+            return;
+        }
+
+//Create a new postcard object
+        try {
+            Postcard postcard = new Postcard();
+            postcard.setUserIDSent(Integer.parseInt(userFrom));
+            postcard.setUserIDReceived(Integer.parseInt(userTo));
+            postcard.setPostcardImage(imageTag);
+
+            //Connect to the database
+            try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+                //Insert the postcard into the database
+                postcard.setTimeSent(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                int postcardId = sql.insertPostcard(postcard);
+                //Set the current time for the postcard YYYY-MM-DD
+
+
+                postcard.setPostcardID(postcardId);
+
+                writeOK(postcard, response);
+            } catch (SQLException | ClassNotFoundException e) {
+                writeError(e, response);
+            }
+
+        } catch (NumberFormatException e) {
+            writeInvalidParameter("Invalid user ID", response);
+        }
+
+        writeResponse(null,"SYSERR",500,response);
+
+    }
+
 
     protected void processGetHomepageDataGET(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -188,6 +319,7 @@ public class MainServlet extends HttpServlet {
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             Postcard[] postcards = sql.getRecentPostcardsWithImage(limit);
             writeOK(postcards, response);
+
         } catch (SQLException | ClassNotFoundException e) {
             writeError(e, response);
         }
@@ -296,29 +428,6 @@ public class MainServlet extends HttpServlet {
 
     }
 
-    protected void processGetHomepageDataGET(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException
-    {
-
-        //Return array of transaction
-
-
-        //Recently sent postcard with images
-
-        //How many users registered
-        try (SQLAccessor sql = SQLAccessor.getDefaultInstance())
-        {
-            int userCount = sql.getNumberofUsers();
-            writeOK(userCount, response);
-        }catch(SQLException | ClassNotFoundException e){
-            writeError(e, response);
-        }
-
-        //how many postcards have been received
-
-        //How many members donated in last 6 months
-
-    }
 
     protected void processdoLoginPOST(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {

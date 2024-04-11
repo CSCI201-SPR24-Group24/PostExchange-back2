@@ -28,7 +28,60 @@ public class SQLAccessor implements AutoCloseable
 
     private java.sql.Connection dbConn;
 
+    //updatePostcardImage
+    public void updatePostcardImage(int postcardId, String postcardImage) throws SQLException
+    {
+        PreparedStatement ps = dbConn.prepareStatement("UPDATE postcards SET postcardImage=? WHERE postcardID=?");
+        ps.setString(1, postcardImage);
+        ps.setInt(2, postcardId);
+        ps.executeUpdate();
+    }
 
+    //random postcard
+
+    public User getRandomUser(User userCalling) throws SQLException
+    {
+        String sql = "SELECT * FROM users WHERE userId != ? ORDER BY RAND() LIMIT 1";
+
+        // Use PreparedStatement for safer parameter insertion
+        PreparedStatement ps = dbConn.prepareStatement(sql);
+
+        // Set the currentUserId as the parameter
+        ps.setInt(1,   Integer.parseInt(userCalling.getUserId()));
+
+        ResultSet rs = ps.executeQuery();
+
+        return getUserFromResultSet(rs);
+
+        //
+
+    }
+
+    //insert postcard
+
+    /**
+     * Insert a postcard into the database.
+     * @param postcard to be created
+     * @return the id for the new postcard
+     * @throws SQLException
+     */
+    public int insertPostcard(Postcard postcard) throws SQLException
+    {
+        PreparedStatement ps = dbConn.prepareStatement("INSERT INTO postcards (timeSent, timeReceived, userIDSent, userIDReceived, postcardImage, postcardMessage) VALUES(?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
+        ps.setString(1, postcard.getTimeSent());
+        ps.setString(2, postcard.getTimeReceived());
+        ps.setInt(3, postcard.getUserIDSent());
+        ps.setInt(4, postcard.getUserIDReceived());
+        ps.setString(5, postcard.getPostcardImage());
+        ps.setString(6, postcard.getPostcardMessage());
+        ps.executeUpdate();
+        ResultSet rs = ps.getGeneratedKeys();
+        if(rs.next())
+        {
+            return rs.getInt(1);
+        }
+        return -1;
+    }
 
 
     /**
@@ -185,6 +238,7 @@ public class SQLAccessor implements AutoCloseable
         return count;
     }
 
+
   
 
     public User getUserByUsernamePassword(String username, String password) throws SQLException
@@ -193,6 +247,10 @@ public class SQLAccessor implements AutoCloseable
         ps.setString(1, username);
         ps.setString(2, password);
         ResultSet rs = ps.executeQuery();
+        return getUserFromResultSet(rs);
+    }
+
+    private User getUserFromResultSet(ResultSet rs) throws SQLException {
         if (rs.next())
         {
             User user = new User(); // Assuming there is a default constructor.
@@ -212,7 +270,7 @@ public class SQLAccessor implements AutoCloseable
         }
         return null; // or throw an exception if user not found
     }
-    
+
     /**
      * Try to register this user into database.
      * @param user
@@ -274,7 +332,7 @@ public class SQLAccessor implements AutoCloseable
         try(SQLAccessor sql = getDefaultInstance())
         {
 
-            User user = new User();
+            /*User user = new User();
             user.setUserName("baba");
             user.setEmail("m@g.c");
             user.setPassword("e10");
@@ -286,7 +344,10 @@ public class SQLAccessor implements AutoCloseable
 
             System.out.println(sql.getUserByUsernamePassword("johndoe@example.com", "482c811da5d5b4bc6d497ffa98491e38"));
             System.out.println(sql.getPostcardById(1));
-            System.out.println(sql.getNumberofUsers());
+            System.out.println(sql.getNumberofUsers());*/
+
+            //System.out.println(sql.getRandomUser());
+            sql.updatePostcardImage(1, "xxx");
 
             System.out.println("Yay!");
         } catch (SQLException  ex)
