@@ -34,7 +34,7 @@ import static com.postexchange.model.ResponseHelper.*;
 
         {
                 "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage", "/getHomepageData", "/getRecentActivities", "/getUser",
-                "/createPostcard", "/getRandUser", "/updatePostcardImage"
+                "/createPostcard", "/getRandUser", "/updatePostcardImage", "/"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {

@@ -28,6 +28,17 @@ public class SQLAccessor implements AutoCloseable
 
     private java.sql.Connection dbConn;
 
+    //add to users mark as recieved
+
+    public void updateUserRecieved(User user) throws SQLException
+    {
+        PreparedStatement ps = dbConn.prepareStatement("UPDATE users SET markAsRecieved=? WHERE userId=?");
+
+        ps.setInt(1, user.getNumberReceived() + 1);
+        ps.setInt(2, Integer.parseInt(user.getUserId()));
+        ps.executeUpdate();
+    }
+
     //updateUserProfile
 
     public void updateUserProfile(User user) throws SQLException
@@ -227,6 +238,7 @@ public class SQLAccessor implements AutoCloseable
                 rs.getString("postcardImage"),
                 rs.getString("postcardMessage"));
     }
+    
 
     public Postcard getPostcardById(int postcardId) throws SQLException
     {
