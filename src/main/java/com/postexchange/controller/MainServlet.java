@@ -34,7 +34,7 @@ import static com.postexchange.model.ResponseHelper.*;
 
         {
                 "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage", "/getHomepageData", "/getRecentActivities", "/getUser",
-                "/createPostcard", "/getRandUser", "/updatePostcardImage", "/markRecieved"
+                "/createPostcard", "/getRandUser", "/updatePostcardImage", "/markRecieved", "getpostcardNotRecieved"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {
@@ -61,7 +61,6 @@ public class MainServlet extends HttpServlet {
             case "/getUser":
                 System.out.println("Get user!");
                 break;
-
             case "/getRecentPostcardsWithImage":
                 processGetRecentPostcardsWithImageGET(request, response);
                 break;
@@ -79,6 +78,11 @@ public class MainServlet extends HttpServlet {
                 processGetUpdatePostcardImage(request, response);
                 break;
             case "/markRecieved":
+                processMarkRecievedPOST(request, response);
+                break;
+            case "/getpostcardNotRecieved":
+                processpostcardNotRecievedPOST(request, response);
+                break;
 
             //Handle other endpoints...
             default:
@@ -227,6 +231,30 @@ public class MainServlet extends HttpServlet {
         {
             writeError(e,response);
         }
+    }
+
+    protected void processpostcardNotRecievedPOST(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException
+    {
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+        if (user == null)
+        {
+            writeNotLoggedIn(response);
+            return;
+        }
+
+        try(SQLAccessor sql = SQLAccessor.getDefaultInstance())
+        {
+            JSONArray postCards = sql.getPostCardNotrecieved(user);
+            writeOK(postCards, response);
+        }
+        catch (SQLException | ClassNotFoundException e)
+        {
+            writeError(e,response);
+        }
+
+
     }
 
     protected void processCreatePostcardPOST(HttpServletRequest request, HttpServletResponse response)

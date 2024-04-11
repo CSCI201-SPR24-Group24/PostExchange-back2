@@ -197,6 +197,31 @@ public class SQLAccessor implements AutoCloseable
         return 0;
     }
 
+    public JSONArray getPostCardNotrecieved(User user) throws SQLException
+    {
+        PreparedStatement ps = dbConn.prepareStatement("SELECT * FROM postcards WHERE userIDRecieved=? AND timeRecieved IS NULL");
+        ps.setInt(1, Integer.parseInt(user.getUserId()));
+        ResultSet rs = ps.executeQuery();
+        
+        JSONArray result = new JSONArray();
+        while(rs.next())
+        {
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.set("postcardId", rs.getInt(1));
+            jsonObject.set("postcardImage", rs.getString(2));
+            jsonObject.set("userIDSent", rs.getInt(3));
+            jsonObject.set("userNameSent", rs.getString(4));
+            jsonObject.set("userCountrySent", rs.getString(5));
+            jsonObject.set("userIDReceived", rs.getInt(6));
+            jsonObject.set("userNameReceived", rs.getString(7));
+            jsonObject.set("userCountryReceived", rs.getString(8));
+            result.add(jsonObject);
+        }
+        return result;
+
+
+    }
+
     public int getNumPostcardReceived6Months() throws SQLException
     {
         Statement s = dbConn.createStatement();
