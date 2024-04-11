@@ -63,7 +63,9 @@ public class ResponseHelper
         try (PrintWriter out = response.getWriter())
         {
             jsonr.write(out);
+            out.flush();
         }
+
     }
 
     ////Below are some shortcut methods that's commonly used.
