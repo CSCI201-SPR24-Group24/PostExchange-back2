@@ -34,7 +34,7 @@ import static com.postexchange.model.ResponseHelper.*;
 
         {
                 "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage", "/getHomepageData", "/getRecentActivities", "/getUser",
-                "/createPostcard", "/getRandUser", "/updatePostcardImage", "/"
+                "/createPostcard", "/getRandUser", "/updatePostcardImage", "/markRecieved"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {
@@ -78,6 +78,8 @@ public class MainServlet extends HttpServlet {
             case "/updatePostcardImage":
                 processGetUpdatePostcardImage(request, response);
                 break;
+            case "/markRecieved":
+
             //Handle other endpoints...
             default:
                 writeResponse("Wrong method! You should try POST method instead for this endpoint.", "SYSERR", 405, response);
@@ -197,6 +199,35 @@ public class MainServlet extends HttpServlet {
 
     }
 
+    protected void processMarkRecievedPOST(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException
+    {
+        //Get the session
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+
+        //Check if the user is logged in
+        if (user == null) {
+            writeNotLoggedIn(response);
+            return;
+        }
+
+        //Get the postcard data from the request, update timeRecieved and add to users numRecieved
+        try(SQLAccessor sql = SQLAccessor.getDefaultInstance())
+        {
+            sql.updateNumSent(user);
+            int postcardId = Integer.parseInt(request.getParameter("postcardId"));
+            Postcard cardToUpdate = sql.getPostcardById(postcardId);
+            cardToUpdate.setTimeReceived(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            sql.updatepostcardtimeRecieved(cardToUpdate);
+
+            writeOK("OK",response);
+        }
+        catch(SQLException | ClassNotFoundException e )
+        {
+            writeError(e,response);
+        }
+    }
 
     protected void processCreatePostcardPOST(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException
@@ -239,6 +270,9 @@ public class MainServlet extends HttpServlet {
 
 
                 postcard.setPostcardID(postcardId);
+
+                //increment numSent for userFrom
+                sql.updateNumSent(user);
 
                 writeOK(postcard, response);
             } catch (SQLException | ClassNotFoundException e) {

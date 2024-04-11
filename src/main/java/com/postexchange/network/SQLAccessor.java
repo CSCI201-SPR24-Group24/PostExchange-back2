@@ -39,6 +39,23 @@ public class SQLAccessor implements AutoCloseable
         ps.executeUpdate();
     }
 
+    //update postcard time recieved
+    public void updatepostcardtimeRecieved(Postcard postcard) throws SQLException
+    {
+        PreparedStatement ps = dbConn.prepareStatement("UPDATE postcards SET timeReceived=? WHERE postcardID=?");
+        ps.setString(1, postcard.getTimeReceived());
+        ps.setInt(2, postcard.getPostcardID());
+        ps.executeUpdate();
+    }
+
+    public void updateNumSent(User user) throws SQLException
+    {
+        PreparedStatement ps = dbConn.prepareStatement("UPDATE users SET numSent=? WHERE userId=?");
+        ps.setInt(1, user.getNumberSent() + 1);
+        ps.setInt(2, Integer.parseInt(user.getUserId()));
+        ps.executeUpdate();
+    }
+
     //updateUserProfile
 
     public void updateUserProfile(User user) throws SQLException
