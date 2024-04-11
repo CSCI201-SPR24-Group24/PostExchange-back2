@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Random User Test</title>
+</head>
+<body>
+    <h1>Random User Test</h1>
+
+    <script>
+        // Make a GET request to the getrandomuser endpoint
+        fetch('/getrandomuser')
+            .then(response => response.json())
+            .then(data => {
+                // Display the random user data on the page
+                const userContainer = document.createElement('div');
+                userContainer.innerHTML = `
+                    <h2>${data.name}</h2>
+                    <p>Email: ${data.email}</p>
+                    <p>Username: ${data.username}</p>
+                `;
+                document.body.appendChild(userContainer);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    </script>
+</body>
+</html>
