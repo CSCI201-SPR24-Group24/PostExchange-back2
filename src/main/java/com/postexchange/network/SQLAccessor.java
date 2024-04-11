@@ -28,6 +28,16 @@ public class SQLAccessor implements AutoCloseable
 
     private java.sql.Connection dbConn;
 
+    //updatePostcardImage
+    public void updatePostcardImage(int postcardId, String postcardImage) throws SQLException
+    {
+        PreparedStatement ps = dbConn.prepareStatement("UPDATE postcards SET postcardImage=? WHERE postcardID=?");
+        ps.setString(1, postcardImage);
+        ps.setInt(2, postcardId);
+        ps.executeUpdate();
+    }
+
+    //random postcard
 
     public User getRandomUser(User userCalling) throws SQLException
     {
@@ -228,6 +238,7 @@ public class SQLAccessor implements AutoCloseable
         return count;
     }
 
+
   
 
     public User getUserByUsernamePassword(String username, String password) throws SQLException
@@ -333,7 +344,10 @@ public class SQLAccessor implements AutoCloseable
 
             System.out.println(sql.getUserByUsernamePassword("johndoe@example.com", "482c811da5d5b4bc6d497ffa98491e38"));
             System.out.println(sql.getPostcardById(1));
-            System.out.println(sql.getNumberofUsers());
+            System.out.println(sql.getNumberofUsers());*/
+
+            //System.out.println(sql.getRandomUser());
+            sql.updatePostcardImage(1, "xxx");
 
             System.out.println("Yay!");
         } catch (SQLException  ex)
