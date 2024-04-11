@@ -29,11 +29,13 @@ import static com.postexchange.model.ResponseHelper.*;
  * @author jianqing
  */
 @WebServlet(name = "MainServlet", urlPatterns =
+
         {
                 "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage","/getHomepageData","/getRecentActivities","/getUser"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {
+
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
 
@@ -56,6 +58,7 @@ public class MainServlet extends HttpServlet {
             case "/getUser":
                 System.out.println("Get user!");
                 break;
+
             case "/getRecentPostcardsWithImage":
                 processGetRecentPostcardsWithImageGET(request, response);
                 break;
@@ -66,7 +69,6 @@ public class MainServlet extends HttpServlet {
                 case "/getHomepageData":
                     processGetHomepageDataGET(request, response);
                     break;
-
 
 
             //Handle other endpoints...
@@ -291,6 +293,30 @@ public class MainServlet extends HttpServlet {
         } catch (SQLException | ClassNotFoundException e) {
             writeError(e, response);//tell the frontend we are having an error.
         }
+
+    }
+
+    protected void processGetHomepageDataGET(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException
+    {
+
+        //Return array of transaction
+
+
+        //Recently sent postcard with images
+
+        //How many users registered
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance())
+        {
+            int userCount = sql.getNumberofUsers();
+            writeOK(userCount, response);
+        }catch(SQLException | ClassNotFoundException e){
+            writeError(e, response);
+        }
+
+        //how many postcards have been received
+
+        //How many members donated in last 6 months
 
     }
 

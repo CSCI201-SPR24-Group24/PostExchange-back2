@@ -78,4 +78,17 @@ public class Postcard {
     public void setPostcardMessage(String postcardMessage) {
         this.postcardMessage = postcardMessage;
     }
+
+    @Override
+    public String toString() {
+        return "Postcard{" +
+                "postcardID=" + postcardID +
+                ", timeSent='" + timeSent + '\'' +
+                ", timeReceived='" + timeReceived + '\'' +
+                ", userIDSent=" + userIDSent +
+                ", userIDReceived=" + userIDReceived +
+                ", postcardImage='" + postcardImage + '\'' +
+                ", postcardMessage='" + postcardMessage + '\'' +
+                '}';
+    }
 }
