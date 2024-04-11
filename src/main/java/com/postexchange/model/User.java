@@ -23,6 +23,19 @@ public class User
     private String userBio;
     private String profilePicture;
     private String lastDonated;
+    private String userName;
+
+    public String getUserName()
+    {
+        return userName;
+    }
+
+    public void setUserName(String userName)
+    {
+        this.userName = userName;
+    }
+    
+    
 
     public String getLastDonated()
     {
