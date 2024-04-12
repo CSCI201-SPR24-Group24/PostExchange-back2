@@ -34,7 +34,7 @@ import static com.postexchange.model.ResponseHelper.*;
 
         {
                 "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage", "/getHomepageData", "/getRecentActivities", "/getUser",
-                "/createPostcard", "/getRandUser", "/updatePostcardImage"
+                "/createPostcard", "/getRandUser", "/updatePostcardImage", "/doLogout", "/doTest"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {
@@ -73,10 +73,17 @@ public class MainServlet extends HttpServlet {
                 processGetHomepageDataGET(request, response);
                 break;
             case "/getRandUser":
-                processGetRandomUser(request,response);
+                processGetRandomUser(request, response);
                 break;
             case "/updatePostcardImage":
                 processGetUpdatePostcardImage(request, response);
+                break;
+            case "/doTest":
+                writeOK("This is a test", response);
+                break;
+            case "/doLogout":
+                request.getSession().removeAttribute("user");
+                writeOK("You have been logged out!", response);
                 break;
             //Handle other endpoints...
             default:
@@ -128,14 +135,13 @@ public class MainServlet extends HttpServlet {
      */
     @Override
     public String getServletInfo() {
-        return "This is the main servlet of this website.";
+        return "This is the main servlet of this website. ";
     }// </editor-fold>
 
     //////// *** HANDLE EACH ENDPOINTS BELOW *** ////////
 
     protected void processGetUpdatePostcardImage(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException
-    {
+            throws ServletException, IOException {
         //Get the session
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
@@ -166,7 +172,7 @@ public class MainServlet extends HttpServlet {
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             //Update the postcard image
             sql.updatePostcardImage(Integer.parseInt(postcardId), imageTag);
-            writeOK("OK updatePostCardImage",response);
+            writeOK("We have updated the postcard image!", response);
         } catch (SQLException | ClassNotFoundException e) {
             writeError(e, response);
         }
@@ -176,22 +182,17 @@ public class MainServlet extends HttpServlet {
 
 
     protected void processGetRandomUser(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException
-    {
+            throws ServletException, IOException {
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
-        if (user == null)
-        {
+        if (user == null) {
             writeResponse("You are not logged in!", "NOLOGIN", 401, response);
         }
 
-        try(SQLAccessor sql = SQLAccessor.getDefaultInstance())
-        {
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             User randomUser = sql.getRandomUser(user);
-            writeOK(randomUser,response);
-        }
-        catch(SQLException | ClassNotFoundException e)
-        {
+            writeOK(randomUser, response);
+        } catch (SQLException | ClassNotFoundException e) {
             writeError(e, response);
         }
 
@@ -199,8 +200,7 @@ public class MainServlet extends HttpServlet {
 
 
     protected void processCreatePostcardPOST(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException
-    {
+            throws ServletException, IOException {
         //Get the session
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
@@ -249,7 +249,7 @@ public class MainServlet extends HttpServlet {
             writeInvalidParameter("Invalid user ID", response);
         }
 
-        writeResponse(null,"SYSERR",500,response);
+        writeResponse(null, "SYSERR", 500, response);
 
     }
 
