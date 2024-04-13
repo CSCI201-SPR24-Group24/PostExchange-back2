@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 
 import static com.postexchange.model.ResponseHelper.*;
 
@@ -59,9 +60,8 @@ public class MainServlet extends HttpServlet {
                 processGetPostcardGET(request, response);
                 break;
             case "/getUser":
-                System.out.println("Get user!");
+                System.out.println("Get user!!");
                 break;
-
             case "/getRecentPostcardsWithImage":
                 processGetRecentPostcardsWithImageGET(request, response);
                 break;
@@ -84,6 +84,9 @@ public class MainServlet extends HttpServlet {
             case "/doLogout":
                 request.getSession().removeAttribute("user");
                 writeOK("You have been logged out!", response);
+                break;
+            case "/getLoggedInUser":
+                writeOK(request.getSession().getAttribute("user"), response);
                 break;
             //Handle other endpoints...
             default:
@@ -368,8 +371,9 @@ public class MainServlet extends HttpServlet {
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             final JSONObject dataObj = JSONUtil.createObj();
             final int id = sql.registerNewUserInDb(user);
-            dataObj.set("userId", id);
-            writeOK(dataObj, response);
+            //dataObj.set("userId", id);
+            user.setUserId(Integer.toString(id));
+            writeOK(user, response);
         } catch (SQLException sqle) {
             switch (sqle.getErrorCode()) {
                 case 1062:
@@ -453,7 +457,7 @@ public class MainServlet extends HttpServlet {
         //Connect to the database
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             //Try to retrieve this pair from the database
-            User user = sql.getUserByUsernamePassword(email, password);
+            User user = sql.getUserByEmailPassword(email, password);
 
             //If the email/password combination does not exist.
             if (user == null) {
