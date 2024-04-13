@@ -312,7 +312,7 @@ public class SQLAccessor implements AutoCloseable {
     private Postcard getPostcardFromResultSet(ResultSet rs) throws SQLException {
         return new Postcard(rs.getInt("postcardID"),
                 rs.getDate("timeSent").toString(),
-                rs.getDate("timeReceived").toString(),
+                rs.getDate("timeReceived") == null ? null : rs.getDate("timeReceived").toString(),
                 rs.getInt("userIDSent"),
                 rs.getInt("userIDReceived"),
                 rs.getString("postcardImage"),

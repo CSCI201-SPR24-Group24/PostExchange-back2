@@ -85,6 +85,12 @@ public class MainServlet extends HttpServlet {
                 request.getSession().removeAttribute("user");
                 writeOK("You have been logged out!", response);
                 break;
+            case "/searchUser":
+                processSearchUserGET(request, response);
+                break;
+            case "/getpostcardNotReceived":
+                processpostcardNotReceivedPOST(request, response);
+                break;
             case "/getLoggedInUser":
                 writeOK(request.getSession().getAttribute("user"), response);
                 break;
