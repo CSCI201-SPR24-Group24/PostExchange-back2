@@ -35,7 +35,8 @@ import static com.postexchange.model.ResponseHelper.*;
 
         {
                 "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage", "/getHomepageData", "/getRecentActivities", "/getUser",
-                "/createPostcard", "/getRandUser", "/updatePostcardImage", "/doLogout", "/doTest"
+                "/createPostcard", "/getRandUser", "/updatePostcardImage", "/doLogout", "/doTest", "/deleteUser", "/markReceived", "/getpostcardNotReceived",
+                "/searchUser", "/getLoggedInUser"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {
@@ -129,6 +130,12 @@ public class MainServlet extends HttpServlet {
             case "/createPostcard":
                 processCreatePostcardPOST(request, response);
                 break;
+            case "/deleteUser":
+                processDeleteUser(request, response);
+                break;
+            case "/markReceived":
+                processMarkReceivedPOST(request, response);
+                break;
 
             //Handle other endpoints...
             default:
@@ -148,6 +155,99 @@ public class MainServlet extends HttpServlet {
     }// </editor-fold>
 
     //////// *** HANDLE EACH ENDPOINTS BELOW *** ////////
+
+
+    protected void processSearchUserGET(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        //Get the session
+        /*HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");*/
+
+        //Get the search query from the request
+        String searchQuery = request.getParameter("q");
+
+        //Check if the search query is missing
+        if (searchQuery == null) {
+            writeMissingParameter("Search query is missing", response);
+            return;
+        }
+
+        //Connect to the database
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            //Search for the user
+            ArrayList<User> users = sql.searchUser(searchQuery);
+            writeOK(users, response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+    }
+
+    protected void processMarkReceivedPOST(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        //Get the session
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+
+        //Check if the user is logged in
+        if (user == null) {
+            writeNotLoggedIn(response);
+            return;
+        }
+
+        //Get the postcard data from the request, update timeRecieved and add to users numRecieved
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            sql.updateNumSent(user);
+            int postcardId = Integer.parseInt(request.getParameter("postcardID"));
+            Postcard cardToUpdate = sql.getPostcardById(postcardId);
+            cardToUpdate.setTimeReceived(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            sql.updatepostcardtimeRecieved(cardToUpdate);
+
+            writeOK("OK", response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+    }
+
+    protected void processpostcardNotReceivedPOST(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            writeNotLoggedIn(response);
+            return;
+        }
+
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            JSONArray postCards = sql.getPostCardNotreceived(user);
+            writeOK(postCards, response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+
+
+    }
+
+    protected void processDeleteUser(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        //Get the session
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+
+        //Check if the user is logged in
+        if (user == null) {
+            writeNotLoggedIn(response);
+            return;
+        }
+
+        //Connect to the database
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            //Delete the user
+            sql.deleteUser(user);
+            writeOK("OK deleteUser", response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+    }
 
     protected void processGetUpdatePostcardImage(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
