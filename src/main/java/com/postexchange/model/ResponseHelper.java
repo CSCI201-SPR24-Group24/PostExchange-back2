@@ -5,6 +5,7 @@
  */
 package com.postexchange.model;
 
+import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -137,7 +138,7 @@ public class ResponseHelper
     public static void writeError(Throwable err, HttpServletResponse response) throws ServletException, IOException
     {
         //logError(err);
-        writeResponse(err, "SYSERR", 500, response);
+        writeResponse(ExceptionUtil.stacktraceToString(err), "SYSERR", 500, response);
     }
     
     /**

@@ -134,8 +134,13 @@ public class ResponseHelperOld
     public static void logError(Throwable dddd)
     {
         //TODO: connect to oss service
-
+        System.out.println("haha, I am logging the error to the cloud.");
         dddd.printStackTrace();
+    }
+
+    public static void main(String[] args) {
+        System.out.println("Hello World!");
+        System.out.println("ddddddd");
     }
 
 }
