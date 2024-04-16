@@ -32,6 +32,17 @@ public class SQLAccessor implements AutoCloseable {
         return d;
     }
 
+    public User getUserById(int id) throws SQLException
+    {
+        String sql = "SELECT * FROM users WHERE userId = ?";
+        PreparedStatement ps = dbConn.prepareStatement(sql);
+        ps.setInt(1,id);
+        ResultSet rs = ps.executeQuery();
+        if(rs.next())
+            return getUserFromResultSet(rs);
+        return null;
+    }
+
     public static void main(String[] args) {
         //try-with-resources
         try (SQLAccessor sql = getDefaultInstance()) {
@@ -161,7 +172,6 @@ public class SQLAccessor implements AutoCloseable {
         ps.setInt(1, Integer.parseInt(userCalling.getUserId()));
 
         ResultSet rs = ps.executeQuery();
-        rs.next();
         return rs.next() ? getUserFromResultSet(rs) : null;
 
         //
