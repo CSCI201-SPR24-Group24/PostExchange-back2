@@ -5,8 +5,13 @@
  */
 package com.postexchange.controller;
 
+import cn.hutool.core.net.multipart.MultipartFormData;
+import cn.hutool.core.net.multipart.UploadFile;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.extra.servlet.ServletUtil;
+import cn.hutool.http.body.MultipartBody;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -25,6 +30,9 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 import static com.postexchange.model.ResponseHelper.*;
 
@@ -36,14 +44,25 @@ import static com.postexchange.model.ResponseHelper.*;
         {
                 "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage", "/getHomepageData", "/getRecentActivities", "/getUser",
                 "/createPostcard", "/getRandUser", "/updatePostcardImage", "/doLogout", "/doTest", "/deleteUser", "/markReceived", "/getpostcardNotReceived",
-                "/searchUser", "/getLoggedInUser"
+                "/searchUser", "/getLoggedInUser","/uploadFile"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {
 
-
+    private ExecutorService executor;
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
 
+    @Override
+    public void init()
+    {
+        executor = Executors.newCachedThreadPool();
+    }
+
+    @Override
+    public void destroy()
+    {
+        executor.shutdownNow();
+    }
     /**
      * Handles the HTTP <code>GET</code> method.
      *
@@ -136,6 +155,9 @@ public class MainServlet extends HttpServlet {
             case "/markReceived":
                 processMarkReceivedPOST(request, response);
                 break;
+            case "/uploadFile":
+                processUploadFilePOST(request, response);
+                break;
 
             //Handle other endpoints...
             default:
@@ -156,6 +178,30 @@ public class MainServlet extends HttpServlet {
 
     //////// *** HANDLE EACH ENDPOINTS BELOW *** ////////
 
+
+    protected void processUploadFilePOST(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException{
+
+        MultipartFormData body = ServletUtil.getMultipart(request);
+        UploadFile file = body.getFile("file");
+        String name = file.getFileName(); // get the file name
+        String[] frga = name.split(Pattern.quote(".")); // get the main "name" and the extension
+        String postfix = frga[frga.length - 1]; // this is the extension  "myjpg.me.png"
+        String realName = RandomUtil.randomString(10) + "." + postfix; // the "id" for the file, add this to database
+        String path = "img/" + realName;// file path relative to the root of the bucket
+        JSONObject jsonr = JSONUtil.createObj();
+
+        try {
+            OSSAccessor.uploadStream(path, file.getFileInputStream());
+            //Upload was ok
+            jsonr.set("tag",realName);
+            writeOK(jsonr, response);
+        }catch(Exception ex)
+        {
+            writeError(ex,response);
+        }
+
+    }
 
     protected void processSearchUserGET(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -346,10 +392,33 @@ public class MainServlet extends HttpServlet {
                 int postcardId = sql.insertPostcard(postcard);
                 //Set the current time for the postcard YYYY-MM-DD
 
-
                 postcard.setPostcardID(postcardId);
 
-                writeOK(postcard, response);
+                executor.execute(()->{
+                    try {
+                        User toUser = sql.getUserById(Integer.parseInt(userTo));
+                        JSONObject activity = JSONUtil.createObj();
+                        activity.set("postcardId",postcardId);
+                        activity.set("fromUserName", user.getUserName());
+                        activity.set("fromUserId", user.getUserId());
+                        activity.set("fromUserCountry", user.getUserCountry());
+                        activity.set("toUserName",toUser.getUserName());
+                        activity.set("toUserId",Integer.parseInt(userTo));
+                        activity.set("toUserCountry",toUser.getUserCountry());
+                        JSONObject jsonr = JSONUtil.createObj();
+                        jsonr.set("data", activity);
+                        jsonr.set("type","SEND");
+                        ActivityWebSocket.broadCast(jsonr.toString());
+                    }catch(Exception es)
+                    {
+                        es.printStackTrace();
+                    }
+                });
+                writeOK(postcard, response);//write the response back
+
+                //do another sql here - ??
+
+                //send activities to the other users, if failed does not impact send back
             } catch (SQLException | ClassNotFoundException e) {
                 writeError(e, response);
             }
