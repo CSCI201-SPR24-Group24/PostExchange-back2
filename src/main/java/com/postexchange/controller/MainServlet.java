@@ -17,6 +17,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.postexchange.model.Postcard;
 import com.postexchange.model.User;
+import com.postexchange.network.OSSAccessor;
 import com.postexchange.network.SQLAccessor;
 
 import javax.servlet.ServletException;
