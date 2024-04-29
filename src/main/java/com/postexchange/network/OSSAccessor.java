@@ -5,8 +5,8 @@ import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.setting.Setting;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
-import java.io.ByteArrayInputStream;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Date;
 

@@ -5,13 +5,14 @@
  */
 package com.postexchange.controller;
 
+import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.net.multipart.MultipartFormData;
 import cn.hutool.core.net.multipart.UploadFile;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.servlet.ServletUtil;
-import cn.hutool.http.body.MultipartBody;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -45,7 +46,7 @@ import static com.postexchange.model.ResponseHelper.*;
         {
                 "/getPostcard", "/doLogin", "/doRegisterUser", "/getRecentPostcardsWithImage", "/getHomepageData", "/getRecentActivities", "/getUser",
                 "/createPostcard", "/getRandUser", "/updatePostcardImage", "/doLogout", "/doTest", "/deleteUser", "/markReceived", "/getpostcardNotReceived",
-                "/searchUser", "/getLoggedInUser","/uploadFile"
+                "/searchUser", "/getLoggedInUser","/uploadFile", "/getPersonalGallery", "/saveProfile", "/getGlobalGallery"
 
         }, loadOnStartup = 1)
 public class MainServlet extends HttpServlet {
@@ -115,6 +116,12 @@ public class MainServlet extends HttpServlet {
             case "/getLoggedInUser":
                 writeOK(request.getSession().getAttribute("user"), response);
                 break;
+            case "/getPersonalGallery":
+                processPersonalGalleryGET(request, response);
+                break;
+            case "/getGlobalGallery":
+                processGlobalGalleryGET(request, response);
+                break;
             //Handle other endpoints...
             default:
                 writeResponse("Wrong method! You should try POST method instead for this endpoint.", "SYSERR", 405, response);
@@ -159,6 +166,9 @@ public class MainServlet extends HttpServlet {
             case "/uploadFile":
                 processUploadFilePOST(request, response);
                 break;
+            case "/saveProfile":
+                processSaveProfilePOST(request, response);
+                break;
 
             //Handle other endpoints...
             default:
@@ -178,7 +188,46 @@ public class MainServlet extends HttpServlet {
     }// </editor-fold>
 
     //////// *** HANDLE EACH ENDPOINTS BELOW *** ////////
+    protected void processSaveProfilePOST(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException{
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            writeNotLoggedIn(response);
+            return;
+        }
 
+        String userName = request.getParameter("userName");
+        String firstName = request.getParameter("firstName");
+        String lastName = request.getParameter("lastName");
+        String userBio = request.getParameter("userBio");
+        String userCountry = request.getParameter("userCountry");
+        String userImage = request.getParameter("userImage");
+
+        if(!StrUtil.isAllNotEmpty(userName,firstName,lastName,userCountry))
+        {
+            writeMissingParameter("some of the required params are missing!", response);
+            return;
+        }
+
+        if (userBio.length() > 6000) {
+            writeInvalidParameter("User bio should be 6000 characrers or shorter.", response);
+            return;
+        }
+
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            user.setUserName(userName);
+            user.setFirstName(firstName);
+            user.setLastName(lastName);
+            user.setUserBio(userBio);
+            user.setUserCountry(userCountry);
+            user.setProfilePicture(userImage);
+            sql.updateUserProfile(user);
+            writeOK(user, response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+    }
 
     protected void processUploadFilePOST(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException{
@@ -202,6 +251,43 @@ public class MainServlet extends HttpServlet {
             writeError(ex,response);
         }
 
+    }
+
+    protected void processGlobalGalleryGET(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException{
+        String limPara = request.getParameter("limit");
+
+        HttpSession session = request.getSession();
+        try(SQLAccessor sql = SQLAccessor.getDefaultInstance()){
+            int limit = 0;
+            try{
+                limit = Integer.parseInt(limPara);
+            } catch(NumberFormatException nfe){
+                limit = 10;
+            }
+            Postcard[] globalPostcards = sql.getGlobalGallery(limit);
+            writeOK(globalPostcards, response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
+    }
+
+    protected void processPersonalGalleryGET(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            writeNotLoggedIn(response);
+            return;
+        }
+
+        try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
+            JSONArray postcards = sql.getPostcardsByUserId(user.getUserId());
+            writeOK(postcards, response);
+        } catch (SQLException | ClassNotFoundException e) {
+            writeError(e, response);
+        }
     }
 
     protected void processSearchUserGET(HttpServletRequest request, HttpServletResponse response)
@@ -248,6 +334,43 @@ public class MainServlet extends HttpServlet {
             Postcard cardToUpdate = sql.getPostcardById(postcardId);
             cardToUpdate.setTimeReceived(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             sql.updatepostcardtimeRecieved(cardToUpdate);
+
+
+            //In the websocket, tell everybody that someone received a postcard!
+            executor.execute(()->{
+                try {
+                    //User toUser = sql.getUserById(Integer.parseInt(userTo));
+                    User fromUser = sql.getUserById(cardToUpdate.getUserIDSent());
+                    JSONObject activity = JSONUtil.createObj();
+                    activity.set("postcardId",postcardId);
+                    activity.set("fromUserName", fromUser.getUserName());
+                    activity.set("fromUserId", cardToUpdate.getUserIDSent());
+                    activity.set("fromUserCountry", fromUser.getUserCountry());
+                    activity.set("toUserName",user.getUserName());
+                    activity.set("toUserId",user.getUserId());
+                    activity.set("toUserCountry",user.getUserCountry());
+                    JSONObject jsonr = JSONUtil.createObj();
+                    jsonr.set("data", activity);
+                    jsonr.set("type","RECEIVE");
+                    ActivityWebSocket.broadCast(jsonr.toString());
+                }catch(SQLException es)
+                {
+                    es.printStackTrace();
+                    try {
+                        JSONObject jsono = JSONUtil.createObj();
+                        jsono.set("type","ERROR");
+                        jsono.set("data", ExceptionUtil.stacktraceToString(es));
+                        ActivityWebSocket.broadCast(jsono.toString());
+                    }catch(Exception ex)
+                    {
+                        ex.printStackTrace();
+                    }
+
+                }catch(IOException ioe)
+                {
+                    ioe.printStackTrace();
+                }
+            });
 
             writeOK("OK", response);
         } catch (SQLException | ClassNotFoundException e) {
@@ -410,9 +533,22 @@ public class MainServlet extends HttpServlet {
                         jsonr.set("data", activity);
                         jsonr.set("type","SEND");
                         ActivityWebSocket.broadCast(jsonr.toString());
-                    }catch(Exception es)
+                    }catch(SQLException es)
                     {
                         es.printStackTrace();
+                        try {
+                            JSONObject jsono = JSONUtil.createObj();
+                            jsono.set("type","ERROR");
+                            jsono.set("data", ExceptionUtil.stacktraceToString(es));
+                            ActivityWebSocket.broadCast(jsono.toString());
+                        }catch(Exception ex)
+                        {
+                            ex.printStackTrace();
+                        }
+
+                    }catch(IOException ioe)
+                    {
+                        ioe.printStackTrace();
                     }
                 });
                 writeOK(postcard, response);//write the response back

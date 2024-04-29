@@ -61,6 +61,7 @@ public class ResponseHelper
         response.setContentType("application/json;charset=utf-8");
         response.setCharacterEncoding("UTF-8");
         response.setStatus(httpCode);
+        response.addHeader("Access-Control-Allow-Origin", "*");
         try (PrintWriter out = response.getWriter())
         {
             jsonr.write(out);
