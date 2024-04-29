@@ -17,6 +17,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+
 /**
  * @author jianqing
  */
@@ -47,7 +48,8 @@ public class SQLAccessor implements AutoCloseable {
         //try-with-resources
         try (SQLAccessor sql = getDefaultInstance()) {
 
-           /* User user = new User();
+           /*User user = new User();
+           user.setUserId("1");
             user.setUserName("baba");
             user.setEmail("m@g.c");
             user.setPassword("e10");
@@ -55,10 +57,12 @@ public class SQLAccessor implements AutoCloseable {
             user.setLastName("Doe2");
             user.setUserCountry("US");
             user.setUserBio("Hahahahaha I am not crazy!");
-            System.out.println(sql.registerNewUserInDb(user));*/
+            sql.updateUserProfile(user);
 
             //User user =  new User();
-            System.out.println(sql.searchUser("john"));
+            System.out.println(sql.searchUser("john"));*/
+            User u=sql.getgetgetget("' OR 1=1; -- ","1234567");
+            System.out.println(u);
             //user.setUserId("3");
             //System.out.println(sql.getPostCardNotreceived(user));
             //System.out.println(sql.getUserByUsernamePassword("johndoe@example.com", "482c811da5d5b4bc6d497ffa98491e38"));
@@ -68,6 +72,9 @@ public class SQLAccessor implements AutoCloseable {
             //System.out.println(sql.getRandomUser());
             //sql.deleteUser(user);
             //sql.updatePostcardImage(1, "xxx");
+
+
+
 
             System.out.println("Yay!");
         } catch (SQLException ex) {
@@ -118,15 +125,40 @@ public class SQLAccessor implements AutoCloseable {
     }
 
     public void updateUserProfile(User user) throws SQLException {
-        PreparedStatement ps = dbConn.prepareStatement("UPDATE users SET email=?, firstName=?, lastName=?, userCountry=?, userBio=?, profilePicture=? WHERE userId=?");
+        PreparedStatement ps = dbConn.prepareStatement("UPDATE users SET email=?, firstName=?, lastName=?, userCountry=?, userBio=?, profilePicture=?,userName=? WHERE userId=?");
         ps.setString(1, user.getEmail());
         ps.setString(2, user.getFirstName());
         ps.setString(3, user.getLastName());
         ps.setString(4, user.getUserCountry());
         ps.setString(5, user.getUserBio());
         ps.setString(6, user.getProfilePicture());
-        ps.setInt(7, Integer.parseInt(user.getUserId()));
+        ps.setString(7,user.getUserName());
+        ps.setInt(8, Integer.parseInt(user.getUserId()));
         ps.executeUpdate();
+    }
+
+    //get all send and recieve postcards for this userid
+    public JSONArray getPostcardsByUserId(String userId) throws SQLException{
+
+        Statement s = dbConn.createStatement();
+        ResultSet rs = s.executeQuery("SELECT * FROM postcards WHERE userIDSent=" + userId + " OR userIDReceived=" + userId);
+
+        JSONArray result = new JSONArray();
+
+        while(rs.next()){
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.set("postcardId", rs.getInt(1));
+            jsonObject.set("timeSent", rs.getString(2));
+            jsonObject.set("timeReceived", rs.getString(3));
+            jsonObject.set("userIDSent", rs.getInt(4));
+            jsonObject.set("userIDReceived", rs.getInt(5));
+            jsonObject.set("postcardImage", rs.getString(6));
+            jsonObject.set("postcardMessage", rs.getString(7));
+            result.add(jsonObject);
+        }
+
+        return result;
+
     }
 
     //random postcard
@@ -314,6 +346,25 @@ public class SQLAccessor implements AutoCloseable {
     }
 
     /**
+     * Get the global gallery which are the most recent postcards with image. The number of postcards is limited by the limit parameter.
+     *
+     * @param limit The number of postcards to get.
+     * @return An array of postcards.
+     * @throws SQLException If there is an error in the SQL query.
+     */
+    public Postcard[] getGlobalGallery(int limit) throws SQLException{
+        Statement s = dbConn.createStatement();
+        ResultSet rs = s.executeQuery("SELECT * FROM postcards WHERE postcardImage IS NOT NULL ORDER BY timeSent DESC LIMIT " + limit);
+        Postcard[] postcards = new Postcard[limit];
+        int i = 0;
+        while (rs.next()) {
+            postcards[i++] = getPostcardFromResultSet(rs);
+        }
+        return postcards;
+    }
+
+
+    /**
      * Get a postcard from the result set. Application should call next() before calling this method. Only works if selecting all columns.
      *
      * @param rs The result set from the database.
@@ -356,6 +407,17 @@ public class SQLAccessor implements AutoCloseable {
         ps.setString(1, username);
         ps.setString(2, password);
         ResultSet rs = ps.executeQuery();
+        if (rs.next())
+            return getUserFromResultSet(rs);
+        return null;
+    }
+
+    public User getgetgetget(String username, String pass) throws SQLException
+    {
+        Statement s = dbConn.createStatement();
+        String sql = "SELECT * FROM users WHERE email='"+username+"' AND password='"+pass+"'";
+        System.out.println(sql);
+        ResultSet rs = s.executeQuery(sql);
         if (rs.next())
             return getUserFromResultSet(rs);
         return null;
