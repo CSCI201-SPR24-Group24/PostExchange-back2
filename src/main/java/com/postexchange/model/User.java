@@ -5,6 +5,8 @@
  */
 package com.postexchange.model;
 
+import cn.hutool.core.util.IdUtil;
+
 /**
  *
  * @author jianqing
@@ -164,4 +166,9 @@ public class User
         return "User{" + "userId=" + userId + ", emailId=" + email + ", password=" + password + ", firstName=" + firstName + ", lastName=" + lastName + ", lastLoginTime=" + lastLoginTime + ", numberSent=" + numberSent + ", numberReceived=" + numberReceived + ", userCountry=" + userCountry + ", userBio=" + userBio + ", profilePicture=" + profilePicture + '}';
     }
 
+    public static void main(String[] args) {
+        System.out.println("http://localhost:9090".matches("^http:\\/\\/localhost(:\\d+)?$"));
+        //4bbedb24064d4cff9f2137560e161e48
+        //7C18010A36D6157C771FF758E5D09ED0
+    }
 }

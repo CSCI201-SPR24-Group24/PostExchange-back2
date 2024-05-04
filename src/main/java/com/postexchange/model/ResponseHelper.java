@@ -12,6 +12,7 @@ import cn.hutool.json.JSONUtil;
 import java.io.IOException;
 import java.io.PrintWriter;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
@@ -30,7 +31,7 @@ public class ResponseHelper
      * Example:<br>
      * <code>
      * protected void processGetUser(HttpRequest request, HttpResponse response)<br>
-     *
+     * <p>
      * {<br>
      * \\retrieve user from database<br>
      * try{<br>
@@ -44,24 +45,37 @@ public class ResponseHelper
      * jsonObj.write(response.getWriter());<br>
      * </code>
      *
-     * @param data The data that should be returned to the client if the
-     * response was success. Otherwise, write the message here.
+     * @param data         The data that should be returned to the client if the
+     *                     response was success. Otherwise, write the message here.
      * @param statusString "OK" for success. Otherwise, write a error code
-     * reflecting what happened. e.g. NOLOGIN, NOPARAM, etc.
-     * @param httpCode The standard HTTP status code to return to the .
-     * @param response The HttpServletResponse object obtained from the servlet.
+     *                     reflecting what happened. e.g. NOLOGIN, NOPARAM, etc.
+     * @param httpCode     The standard HTTP status code to return to the .
+     * @param request
+     * @param response     The HttpServletResponse object obtained from the servlet.
      * @throws ServletException
      * @throws IOException
      */
-    public static void writeResponse(Object data, String statusString, int httpCode, HttpServletResponse response) throws ServletException, IOException
+    public static void writeResponse(Object data, String statusString, int httpCode, HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
     {
         JSONObject jsonr = JSONUtil.createObj();
+        // Retrieve the session cookie from the response
+
         jsonr.set("status", statusString);
         jsonr.set("data", data);
         response.setContentType("application/json;charset=utf-8");
         response.setCharacterEncoding("UTF-8");
         response.setStatus(httpCode);
-        response.addHeader("Access-Control-Allow-Origin", "*");
+        //response.addHeader("Access-Control-Allow-Origin", "*");
+        String origin = request.getHeader("Origin");
+        if(origin != null && origin.matches("^http://localhost(:\\d+)?$"))
+        {
+            response.addHeader("Access-Control-Allow-Origin", origin);
+            response.addHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
+            response.addHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me");
+            response.addHeader("Access-Control-Allow-Credentials", "true");
+        }
+
+
         try (PrintWriter out = response.getWriter())
         {
             jsonr.write(out);
@@ -75,13 +89,14 @@ public class ResponseHelper
      * Indicate that we are missing required parameter from the client. Write
      * the needed response to the JSON.
      *
-     * @param resp The response object from servlet.
+     * @param request
+     * @param resp    The response object from servlet.
      * @throws ServletException
      * @throws IOException
      */
-    public static void writeMissingParameter(HttpServletResponse resp) throws ServletException, IOException
+    public static void writeMissingParameter(HttpServletRequest request, HttpServletResponse resp) throws ServletException, IOException
     {
-        writeResponse("Required parameters are not found!", "NOPARAM", 400, resp);
+        writeResponse("Required parameters are not found!", "NOPARAM", 400, request, resp);
     }
 
     /**
@@ -89,81 +104,87 @@ public class ResponseHelper
      * custom message. Write the needed response to the JSON.
      *
      * @param message The custom message to send back.
-     * @param resp The response object from servlet.
+     * @param request
+     * @param resp    The response object from servlet.
      * @throws ServletException
      * @throws IOException
      */
-    public static void writeMissingParameter(String message, HttpServletResponse resp) throws ServletException, IOException
+    public static void writeMissingParameter(String message, HttpServletRequest request, HttpServletResponse resp) throws ServletException, IOException
     {
-        writeResponse(message, "NOPARAM", 400, resp);
+        writeResponse(message, "NOPARAM", 400, request, resp);
     }
 
     /**
      * Indicate that the user tried to access an login required endpoint without
      * logging in.
      *
-     * @param resp The <code>HttpServletResponse</code> object obtained from the
-     * servlet.
+     * @param request
+     * @param resp    The <code>HttpServletResponse</code> object obtained from the
+     *                servlet.
      * @throws ServletException
      * @throws IOException
      */
-    public static void writeNotLoggedIn(HttpServletResponse resp) throws ServletException, IOException
+    public static void writeNotLoggedIn(HttpServletRequest request, HttpServletResponse resp) throws ServletException, IOException
     {
-        writeResponse("You need to login first to use this function. Please login!", "NOLOGIN", 400, resp);
+        writeResponse("You need to login first to use this function. Please login!", "NOLOGIN", 400, request, resp);
     }
 
     /**
      * Indicate that the request was processed OK. Return the requested data
      * from here.
      *
-     * @param data The "data" the user is requesting.
+     * @param data     The "data" the user is requesting.
      * @param response The <code>HttpServletResponse</code> object obtained from
-     * the servlet.
+     *                 the servlet.
+     * @param request
      * @throws ServletException
      * @throws IOException
      */
-    public static void writeOK(Object data, HttpServletResponse response) throws ServletException, IOException
+    public static void writeOK(Object data, HttpServletResponse response, HttpServletRequest request) throws ServletException, IOException
     {
-        writeResponse(data, "OK", 200, response);
+        writeResponse(data, "OK", 200, request, response);
     }
 
     /**
      * Indicate that the there was an exception thrown.
      *
-     * @param err The exception object in the catch statement.
+     * @param err      The exception object in the catch statement.
+     * @param request
      * @param response The <code>HttpServletResponse</code> object obtained from
-     * the servlet.
+     *                 the servlet.
      * @throws ServletException
      * @throws IOException
      */
-    public static void writeError(Throwable err, HttpServletResponse response) throws ServletException, IOException
+    public static void writeError(Throwable err, HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
     {
         //logError(err);
-        writeResponse(ExceptionUtil.stacktraceToString(err), "SYSERR", 500, response);
+        writeResponse(ExceptionUtil.stacktraceToString(err), "SYSERR", 500, request, response);
     }
     
     /**
      * Indicate that the data passed in failed validation.
-     * @param message What went wrong
+     *
+     * @param message  What went wrong
+     * @param request
      * @param response The response object to write to.
      * @throws ServletException
-     * @throws IOException 
+     * @throws IOException
      */
-    public static void writeInvalidParameter(String message, HttpServletResponse response )throws ServletException, IOException
+    public static void writeInvalidParameter(String message, HttpServletRequest request, HttpServletResponse response )throws ServletException, IOException
     {
-        writeResponse(message, "INVALID", 401, response);
+        writeResponse(message, "INVALID", 401, request, response);
     }
     
     /**
      * Indicate that the data passed in failed validation.
-     * @param message What went wrong
+     * @param  What went wrong
      * @param response The response object to write to.
      * @throws ServletException
      * @throws IOException 
      */
-    public static void writeInvalidParameter( HttpServletResponse response )throws ServletException, IOException
+    public static void writeInvalidParameter(HttpServletRequest request, HttpServletResponse response )throws ServletException, IOException
     {
-        writeResponse("A parameter passed in does not satisify format requirement. Please check API docs and data passed in.", "INVALID", 401, response);
+        writeResponse("A parameter passed in does not satisify format requirement. Please check API docs and data passed in.", "INVALID", 401, request, response);
     }
     
     /**
