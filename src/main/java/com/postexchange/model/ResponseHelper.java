@@ -65,7 +65,7 @@ public class ResponseHelper
         response.setContentType("application/json;charset=utf-8");
         response.setCharacterEncoding("UTF-8");
         response.setStatus(httpCode);
-        //response.addHeader("Access-Control-Allow-Origin", "*");
+        //response.addHeader("Access-Control-Allow-Origin", "*"); // * is not supported for cross site cookie
         String origin = request.getHeader("Origin");
         if(origin != null && origin.matches("^http://localhost(:\\d+)?$"))
         {
