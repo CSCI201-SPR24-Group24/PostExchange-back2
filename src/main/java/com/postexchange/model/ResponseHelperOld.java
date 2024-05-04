@@ -5,6 +5,7 @@
  */
 package com.postexchange.model;
 
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONObject;
 import java.io.IOException;
 import javax.servlet.ServletException;
@@ -139,8 +140,7 @@ public class ResponseHelperOld
     }
 
     public static void main(String[] args) {
-        System.out.println("Hello World!");
-        System.out.println("ddddddd");
+
     }
 
 }

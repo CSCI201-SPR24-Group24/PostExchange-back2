@@ -46,7 +46,8 @@ public class SQLAccessor implements AutoCloseable {
 
     public static void main(String[] args) {
         //try-with-resources
-        try (SQLAccessor sql = getDefaultInstance()) {
+        try (SQLAccessor sql = getDefaultInstance())
+        {
 
            /*User user = new User();
            user.setUserId("1");
@@ -335,14 +336,7 @@ public class SQLAccessor implements AutoCloseable {
      * @throws SQLException If there is an error in the SQL query.
      */
     public Postcard[] getRecentPostcardsWithImage(int limit) throws SQLException {
-        Statement s = dbConn.createStatement();
-        ResultSet rs = s.executeQuery("SELECT * FROM postcards WHERE postcardImage IS NOT NULL ORDER BY timeSent DESC LIMIT " + limit);
-        Postcard[] postcards = new Postcard[limit];
-        int i = 0;
-        while (rs.next()) {
-            postcards[i++] = getPostcardFromResultSet(rs);
-        }
-        return postcards;
+        return getGlobalGallery(limit);
     }
 
     /**

@@ -8,10 +8,7 @@ package com.postexchange.controller;
 import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.net.multipart.MultipartFormData;
 import cn.hutool.core.net.multipart.UploadFile;
-import cn.hutool.core.util.NumberUtil;
-import cn.hutool.core.util.RandomUtil;
-import cn.hutool.core.util.ReUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.*;
 import cn.hutool.extra.servlet.ServletUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
@@ -23,10 +20,7 @@ import com.postexchange.network.SQLAccessor;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import javax.servlet.http.*;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -65,6 +59,9 @@ public class MainServlet extends HttpServlet {
     {
         executor.shutdownNow();
     }
+
+
+
     /**
      * Handles the HTTP <code>GET</code> method.
      *
@@ -77,6 +74,12 @@ public class MainServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String path = request.getServletPath();//What's the slashtag client is requesting
+        String origin = request.getHeader("Origin");
+        // Check if the origin is from localhost with any port
+       // if (origin != null && origin.matches("^http://localhost(:\\d+)?$")) {
+            // Set CORS headers
+
+       // }
         switch (path) {
             case "/getPostcard":
                 processGetPostcardGET(request, response);
@@ -101,11 +104,11 @@ public class MainServlet extends HttpServlet {
                 processGetUpdatePostcardImage(request, response);
                 break;
             case "/doTest":
-                writeOK("This is a test", response);
+                writeOK("This is a test", response, request);
                 break;
             case "/doLogout":
                 request.getSession().removeAttribute("user");
-                writeOK("You have been logged out!", response);
+                writeOK("You have been logged out!", response, request);
                 break;
             case "/searchUser":
                 processSearchUserGET(request, response);
@@ -114,7 +117,7 @@ public class MainServlet extends HttpServlet {
                 processpostcardNotReceivedPOST(request, response);
                 break;
             case "/getLoggedInUser":
-                writeOK(request.getSession().getAttribute("user"), response);
+                writeOK(request.getSession().getAttribute("user"), response, request);
                 break;
             case "/getPersonalGallery":
                 processPersonalGalleryGET(request, response);
@@ -124,7 +127,7 @@ public class MainServlet extends HttpServlet {
                 break;
             //Handle other endpoints...
             default:
-                writeResponse("Wrong method! You should try POST method instead for this endpoint.", "SYSERR", 405, response);
+                writeResponse("Wrong method! You should try POST method instead for this endpoint.", "SYSERR", 405, request, response);
                 break;
 
         }
@@ -146,6 +149,15 @@ public class MainServlet extends HttpServlet {
         //Determine which endpoint the user is trying to request
         String endpoint = request.getServletPath();
 
+        String origin = request.getHeader("Origin");
+        // Check if the origin is from localhost with any port
+        //if (origin != null && origin.matches("^http:\\/\\/localhost(:\\d+)?$")) {
+            // Set CORS headers
+            response.addHeader("Access-Control-Allow-Origin", origin);
+            response.addHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
+            response.addHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me");
+            response.addHeader("Access-Control-Allow-Credentials", "true");
+        //}
         //Handle the endpoints
         switch (endpoint) {
             case "/doLogin":
@@ -172,7 +184,7 @@ public class MainServlet extends HttpServlet {
 
             //Handle other endpoints...
             default:
-                writeResponse("Wrong method! You should try GET method instead for this endpoint.", "SYSERR", 405, response);
+                writeResponse("Wrong method! You should try GET method instead for this endpoint.", "SYSERR", 405, request, response);
                 break;
         }
     }
@@ -193,7 +205,7 @@ public class MainServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
         if (user == null) {
-            writeNotLoggedIn(response);
+            writeNotLoggedIn(request, response);
             return;
         }
 
@@ -206,12 +218,12 @@ public class MainServlet extends HttpServlet {
 
         if(!StrUtil.isAllNotEmpty(userName,firstName,lastName,userCountry))
         {
-            writeMissingParameter("some of the required params are missing!", response);
+            writeMissingParameter("some of the required params are missing!", request, response);
             return;
         }
 
         if (userBio.length() > 6000) {
-            writeInvalidParameter("User bio should be 6000 characrers or shorter.", response);
+            writeInvalidParameter("User bio should be 6000 characrers or shorter.", request, response);
             return;
         }
 
@@ -223,9 +235,9 @@ public class MainServlet extends HttpServlet {
             user.setUserCountry(userCountry);
             user.setProfilePicture(userImage);
             sql.updateUserProfile(user);
-            writeOK(user, response);
+            writeOK(user, response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -245,10 +257,10 @@ public class MainServlet extends HttpServlet {
             OSSAccessor.uploadStream(path, file.getFileInputStream());
             //Upload was ok
             jsonr.set("tag",realName);
-            writeOK(jsonr, response);
+            writeOK(jsonr, response, request);
         }catch(Exception ex)
         {
-            writeError(ex,response);
+            writeError(ex, request, response);
         }
 
     }
@@ -266,9 +278,9 @@ public class MainServlet extends HttpServlet {
                 limit = 10;
             }
             Postcard[] globalPostcards = sql.getGlobalGallery(limit);
-            writeOK(globalPostcards, response);
+            writeOK(globalPostcards, response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -278,15 +290,15 @@ public class MainServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
         if (user == null) {
-            writeNotLoggedIn(response);
+            writeNotLoggedIn(request, response);
             return;
         }
 
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             JSONArray postcards = sql.getPostcardsByUserId(user.getUserId());
-            writeOK(postcards, response);
+            writeOK(postcards, response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -301,7 +313,7 @@ public class MainServlet extends HttpServlet {
 
         //Check if the search query is missing
         if (searchQuery == null) {
-            writeMissingParameter("Search query is missing", response);
+            writeMissingParameter("Search query is missing", request, response);
             return;
         }
 
@@ -309,9 +321,9 @@ public class MainServlet extends HttpServlet {
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             //Search for the user
             ArrayList<User> users = sql.searchUser(searchQuery);
-            writeOK(users, response);
+            writeOK(users, response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -323,7 +335,7 @@ public class MainServlet extends HttpServlet {
 
         //Check if the user is logged in
         if (user == null) {
-            writeNotLoggedIn(response);
+            writeNotLoggedIn(request, response);
             return;
         }
 
@@ -372,9 +384,9 @@ public class MainServlet extends HttpServlet {
                 }
             });
 
-            writeOK("OK", response);
+            writeOK("OK", response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -383,15 +395,15 @@ public class MainServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
         if (user == null) {
-            writeNotLoggedIn(response);
+            writeNotLoggedIn(request, response);
             return;
         }
 
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             JSONArray postCards = sql.getPostCardNotreceived(user);
-            writeOK(postCards, response);
+            writeOK(postCards, response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
 
 
@@ -405,7 +417,7 @@ public class MainServlet extends HttpServlet {
 
         //Check if the user is logged in
         if (user == null) {
-            writeNotLoggedIn(response);
+            writeNotLoggedIn(request, response);
             return;
         }
 
@@ -413,9 +425,9 @@ public class MainServlet extends HttpServlet {
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             //Delete the user
             sql.deleteUser(user);
-            writeOK("OK deleteUser", response);
+            writeOK("OK deleteUser", response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -427,7 +439,7 @@ public class MainServlet extends HttpServlet {
 
         //Check if the user is logged in
         if (user == null) {
-            writeNotLoggedIn(response);
+            writeNotLoggedIn(request, response);
             return;
         }
 
@@ -437,13 +449,13 @@ public class MainServlet extends HttpServlet {
 
         //Check if the parameters are missing
         if (postcardId == null || imageTag == null) {
-            writeMissingParameter(response);
+            writeMissingParameter(request, response);
             return;
         }
 
         //Check if the postcardId is an integer
         if (!NumberUtil.isInteger(postcardId)) {
-            writeInvalidParameter("Postcard ID must be an integer", response);
+            writeInvalidParameter("Postcard ID must be an integer", request, response);
             return;
         }
 
@@ -451,9 +463,9 @@ public class MainServlet extends HttpServlet {
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             //Update the postcard image
             sql.updatePostcardImage(Integer.parseInt(postcardId), imageTag);
-            writeOK("We have updated the postcard image!", response);
+            writeOK("We have updated the postcard image!", response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
 
 
@@ -465,14 +477,14 @@ public class MainServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User user = (User) session.getAttribute("user");
         if (user == null) {
-            writeResponse("You are not logged in!", "NOLOGIN", 401, response);
+            writeResponse("You are not logged in!", "NOLOGIN", 401, request, response);
         }
 
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             User randomUser = sql.getRandomUser(user);
-            writeOK(randomUser, response);
+            writeOK(randomUser, response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
 
     }
@@ -486,7 +498,7 @@ public class MainServlet extends HttpServlet {
 
         //Check if the user is logged in
         if (user == null) {
-            writeNotLoggedIn(response);
+            writeNotLoggedIn(request, response);
             return;
         }
 
@@ -498,7 +510,7 @@ public class MainServlet extends HttpServlet {
 
         //Check if the parameters are missing
         if (userTo == null) {
-            writeMissingParameter(response);
+            writeMissingParameter(request, response);
             return;
         }
 
@@ -551,24 +563,31 @@ public class MainServlet extends HttpServlet {
                         ioe.printStackTrace();
                     }
                 });
-                writeOK(postcard, response);//write the response back
+                writeOK(postcard, response, request);//write the response back
 
                 //do another sql here - ??
 
                 //send activities to the other users, if failed does not impact send back
             } catch (SQLException | ClassNotFoundException e) {
-                writeError(e, response);
+                writeError(e, request, response);
             }
 
         } catch (NumberFormatException e) {
-            writeInvalidParameter("Invalid user ID", response);
+            writeInvalidParameter("Invalid user ID", request, response);
         }
 
-        writeResponse(null, "SYSERR", 500, response);
+        writeResponse(null, "SYSERR", 500, request, response);
 
     }
 
 
+    /**
+     * Example: Handle an endpoint called GetHomepageData.  <br>
+     * @param request The HTTPServletRequest Object directly taken from servlet
+     * @param response The response object.
+     * @throws ServletException  If there is a servlet error.
+     * @throws IOException If there is an I/O error.
+     */
     protected void processGetHomepageDataGET(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         //Connect to the database
@@ -591,9 +610,9 @@ public class MainServlet extends HttpServlet {
             data.set("numPostcardTravelling", numPostcardTravelling);
             data.set("numPostcardReceived6Months", numPostcardReceived6Months);
             data.set("numDonatedLast6Months", numDonatedLast6Months);
-            writeOK(data, response);
+            writeOK(data, response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -612,9 +631,9 @@ public class MainServlet extends HttpServlet {
         //Connect to the database
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             JSONArray activities = sql.getRecentActivities(limit);
-            writeOK(activities, response);
+            writeOK(activities, response, request);
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -633,10 +652,10 @@ public class MainServlet extends HttpServlet {
         //Connect to the database
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             Postcard[] postcards = sql.getRecentPostcardsWithImage(limit);
-            writeOK(postcards, response);
+            writeOK(postcards, response, request);
 
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);
+            writeError(e, request, response);
         }
     }
 
@@ -654,17 +673,17 @@ public class MainServlet extends HttpServlet {
 
         //Validation
         if (password.length() != 32) {
-            writeInvalidParameter("Password must be MD5 hashed. Got you:) ", response);
+            writeInvalidParameter("Password must be MD5 hashed. Got you:) ", request, response);
             return;
         }
 
         if (!isEmail(email)) {
-            writeInvalidParameter("The email is in invalid format.", response);
+            writeInvalidParameter("The email is in invalid format.", request, response);
             return;
         }
 
         if (userBio.length() > 6000) {
-            writeInvalidParameter("User bio should be 6000 characrers or shorter.", response);
+            writeInvalidParameter("User bio should be 6000 characrers or shorter.", request, response);
             return;
         }
 
@@ -685,27 +704,28 @@ public class MainServlet extends HttpServlet {
             final int id = sql.registerNewUserInDb(user);
             //dataObj.set("userId", id);
             user.setUserId(Integer.toString(id));
-            writeOK(user, response);
+            writeOK(user, response, request);
         } catch (SQLException sqle) {
             switch (sqle.getErrorCode()) {
                 case 1062:
                     //duplicate entry for unique index 1062
-                    writeResponse("The email is already registered", "USER_EXISTS", 401, response);
+                    writeResponse("The email is already registered", "USER_EXISTS", 401, request, response);
                     break;
                 case 1406:
                     //Length constraint violation 1406
-                    writeInvalidParameter("One of the fields is too long! Validate before submit:)", response);
+                    writeInvalidParameter("One of the fields is too long! Validate before submit:)", request, response);
                     break;
                 default:
                     //Other unknown error
-                    writeError(sqle, response);
+                    writeError(sqle, request, response);
                     break;
             }
         } catch (Exception nx) {
-            writeError(nx, response);
+            writeError(nx, request, response);
         }
 
     }
+
 
 
     /**
@@ -730,16 +750,16 @@ public class MainServlet extends HttpServlet {
         if (!NumberUtil.isInteger(postcardId))//In case of invalid input
         {
             //2.1 Indicate that we can't find a valid parameter, also write the response back to the client.
-            writeMissingParameter("Postcard ID must be an integer!", response);
+            writeMissingParameter("Postcard ID must be an integer!", request, response);
             return; // Terminate the function.
         }
 
         //3. Database work here to retrieve postcard information
         try (SQLAccessor sql = SQLAccessor.getDefaultInstance()) {
             Postcard pc = sql.getPostcardById(Integer.parseInt(postcardId)); //Retrieve postcard from the database
-            writeOK(pc, response);//Write the response to the frontend.
+            writeOK(pc, response, request);//Write the response to the frontend.
         } catch (SQLException | ClassNotFoundException e) {
-            writeError(e, response);//tell the frontend we are having an error.
+            writeError(e, request, response);//tell the frontend we are having an error.
         }
 
     }
@@ -748,6 +768,8 @@ public class MainServlet extends HttpServlet {
     protected void processdoLoginPOST(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         //Retrieve the HTTPSession and parameters.
+
+
         HttpSession session = request.getSession();
         String email = request.getParameter("email");
         String password = request.getParameter("password");
@@ -756,13 +778,13 @@ public class MainServlet extends HttpServlet {
         //is password hashed?
         if (password.length() != 32) {
             //return to frondend error
-            writeMissingParameter("The password does not appear to be MD5 hashed. Please submit MD5 hashed password", response);
+            writeMissingParameter("The password does not appear to be MD5 hashed. Please submit MD5 hashed password", request, response);
             return;
         }
 
         //is email valid?
         if (!ReUtil.isMatch(emailPattern, email)) {
-            writeMissingParameter("Missing valid email!", response);
+            writeMissingParameter("Missing valid email!", request, response);
             return;
         }
 
@@ -773,19 +795,27 @@ public class MainServlet extends HttpServlet {
 
             //If the email/password combination does not exist.
             if (user == null) {
-                writeResponse("Email/password combination does not exist.", "USER_DNE", 401, response);
+                writeResponse("Email/password combination does not exist.", "USER_DNE", 401, request, response);
                 return;
             }
 
             //Validate the user into our session
             session.setAttribute("user", user);
 
+
+
+
+            response.reset();
+            Cookie ckk = new Cookie("JSESSIONID", session.getId());
+            ckk.setSecure(true);
+            ckk.setPath("/");
+            response.addCookie(ckk);
             //Send the data back to the client.
-            writeOK(user, response);
+            writeOK(user, response, request);
 
         } catch (SQLException | ClassNotFoundException sqle) {
             //Tell the client that we have an error.
-            writeError(sqle, response);
+            writeError(sqle, request, response);
         }
 
     }
