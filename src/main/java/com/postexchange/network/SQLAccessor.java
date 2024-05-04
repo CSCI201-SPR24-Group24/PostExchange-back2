@@ -172,6 +172,21 @@ public class SQLAccessor implements AutoCloseable {
 
     //insert postcard
 
+    //updateUserProfile
+
+    public void updateUserProfile(User user) throws SQLException
+    {
+        PreparedStatement ps = dbConn.prepareStatement("UPDATE users SET email=?, firstName=?, lastName=?, userCountry=?, userBio=?, profilePicture=? WHERE userId=?");
+        ps.setString(1, user.getEmail());
+        ps.setString(2, user.getFirstName());
+        ps.setString(3, user.getLastName());
+        ps.setString(4, user.getUserCountry());
+        ps.setString(5, user.getUserBio());
+        ps.setString(6, user.getProfilePicture());
+        ps.setInt(7, Integer.parseInt(user.getUserId()));
+        ps.executeUpdate();
+    }
+
     //updatePostcardImage
     public void updatePostcardImage(int postcardId, String postcardImage) throws SQLException {
         PreparedStatement ps = dbConn.prepareStatement("UPDATE postcards SET postcardImage=? WHERE postcardID=?");
