@@ -152,10 +152,10 @@ public class MainServlet extends HttpServlet {
         // Check if the origin is from localhost with any port
         //if (origin != null && origin.matches("^http:\\/\\/localhost(:\\d+)?$")) {
         // Set CORS headers
-        response.addHeader("Access-Control-Allow-Origin", origin);
+       /* response.addHeader("Access-Control-Allow-Origin", origin);
         response.addHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
         response.addHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me");
-        response.addHeader("Access-Control-Allow-Credentials", "true");
+        response.addHeader("Access-Control-Allow-Credentials", "true");*/
         //}
         //Handle the endpoints
         switch (endpoint) {

@@ -177,7 +177,6 @@ public class ResponseHelper
     
     /**
      * Indicate that the data passed in failed validation.
-     * @param  What went wrong
      * @param response The response object to write to.
      * @throws ServletException
      * @throws IOException 

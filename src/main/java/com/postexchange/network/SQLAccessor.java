@@ -174,7 +174,7 @@ public class SQLAccessor implements AutoCloseable {
 
     //updateUserProfile
 
-    public void updateUserProfile(User user) throws SQLException
+    /*public void updateUserProfile(User user) throws SQLException
     {
         PreparedStatement ps = dbConn.prepareStatement("UPDATE users SET email=?, firstName=?, lastName=?, userCountry=?, userBio=?, profilePicture=? WHERE userId=?");
         ps.setString(1, user.getEmail());
@@ -185,7 +185,7 @@ public class SQLAccessor implements AutoCloseable {
         ps.setString(6, user.getProfilePicture());
         ps.setInt(7, Integer.parseInt(user.getUserId()));
         ps.executeUpdate();
-    }
+    }*/
 
     //updatePostcardImage
     public void updatePostcardImage(int postcardId, String postcardImage) throws SQLException {
@@ -437,6 +437,7 @@ public class SQLAccessor implements AutoCloseable {
         user.setUserId(rs.getString("userId"));
         user.setEmail(rs.getString("email"));
         // password is transient, you usually don't set it from the database.
+        user.setUserName(rs.getString("userName"));
         user.setFirstName(rs.getString("firstName"));
         user.setLastName(rs.getString("lastName"));
         user.setLastLoginTime(rs.getString("lastLoginTime"));
