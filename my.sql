@@ -1,0 +1,1 @@
+SELECT * FROM users WHERE email='' OR 1=1; -- ' AND password='1234567'
